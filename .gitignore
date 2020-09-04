@@ -1,0 +1,11 @@
+###
+*
+!.gitattributes
+!/.gitignore
+!.gitkeep
+# 保留python文件
+!*.py
+!*.sh
+!*.md
+!*.html
+!*/
