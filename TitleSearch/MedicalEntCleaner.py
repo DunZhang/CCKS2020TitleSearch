@@ -12,12 +12,20 @@ from typing import List, Tuple
 import logging
 from collections import defaultdict
 import pandas as pd
+import json
+import os
+from DataUtil import DataUtil
+import sys
 
+if "win" in sys.platform:
+    PROJ_PATH = r"G:\Codes\CCKS2020TitleSearch"
+else:
+    PROJ_PATH = "/home/wcm/ZhangDun/CCKS2020TitleSearch"
 logger = logging.getLogger(__name__)
 
 
 class MedicalEntCleaner:
-    def __init__(self, areas_path):
+    def __init__(self, areas_path: str, foreign_name2ch_name_path: str = None, external_fun_path: str = None):
         # TODO 考虑是否需要把这些东西全都去掉
         self.company_names = ["生物工程有限公司", "制药有限责任公司", "制药有限公司", "药业股份有限公司", "药业集团有限公司", "药业有限公司",
                               "生物科技股份有限公司", "制药股份有限公司", "医疗器械有限公司", "生物电子技术有限公司",
@@ -31,6 +39,16 @@ class MedicalEntCleaner:
         self.all_areas = None
         self.area2name = None
         self.read_areas()
+        logger.info("加载中英文名字...")
+        self.eng_name2ch_name = {}
+        if foreign_name2ch_name_path and os.path.exists(foreign_name2ch_name_path):
+            with open(foreign_name2ch_name_path, "r", encoding="utf8") as fr:
+                self.eng_name2ch_name = json.load(fr)
+        logger.info("加载外部实体功能表...")
+        self.ext_fun = {}
+        if external_fun_path and os.path.exists(external_fun_path):
+            with open(external_fun_path, "r", encoding="utf8") as fr:
+                self.ext_fun = json.load(fr)
 
     def read_areas(self):
         self.area2name = {}
@@ -54,7 +72,7 @@ class MedicalEntCleaner:
         :param text:
         :return:
         """
-        text = text.strip()
+        text = text.strip().replace("（", "(").replace("）", ")")
         if text.startswith("(") and text.endswith(")"):
             text = text[1:-1]
         ### 开始反复提取括号里的内容
@@ -152,9 +170,21 @@ class MedicalEntCleaner:
             units = ["片"]
         return ";".join(units)
 
+    def clean_name(self, text):
+        """
+        清洗name
+        :param text:
+        :return:
+        """
+        text = str(text).strip().lower()
+        for eng_name, ch_name in self.eng_name2ch_name:
+            text = text.replace(eng_name, eng_name + "," + ch_name)
+        return text
+
     def clean_medical_ent_info(self, ent_info):
         subj_id = str(ent_info["subject_id"]).strip()
-        name = str(ent_info["subject"]).strip()
+        # 清洗name
+        name = self.clean_name(ent_info["subject"])
         # 获取原始信息
         ori_attr_info = {attr: None for attr in self.attr_names}
         ori_attr_info["name"] = ent_info["subject"]
@@ -168,8 +198,11 @@ class MedicalEntCleaner:
         places, companies = self.clean_company_place(str(ori_attr_info["生产企业"]), str(ori_attr_info["产地"]))
         # 清洗 症状和功能 合并为功能
         symptom, function = self.clean_symptom(ori_attr_info["症状"]), self.clean_function(ori_attr_info["功能"])
-        if len(symptom) > 0 and symptom != "nan" and symptom.lower() != "none":
+        if not DataUtil.is_null(symptom):
             function = symptom
+        # 外部信息补全
+        if DataUtil.is_null(function) and subj_id in self.ext_fun:
+            function = self.ext_fun[subj_id]
         # 清洗成分
         bases = self.clean_bases(ori_attr_info["主要成分"])
         # 清洗规格
@@ -262,12 +295,16 @@ class MedicalEntCleaner:
 
 
 if __name__ == "__main__":
-    read_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\ori_data\entity_kb.txt"
-    save_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_ents.bin"
-    xls_save_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_ents.xlsx"
-    mec = MedicalEntCleaner(r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\areas.txt")
-    # res = mec.clean_ori_data(read_path, save_path, xls_save_path)
+    read_path = os.path.join(PROJ_PATH, "data/ori_data/entity_kb.txt")
+    save_path = os.path.join(PROJ_PATH, "data/format_data/medical_ents.bin")
+    xls_save_path = os.path.join(PROJ_PATH, "data/format_data/medical_ents.xlsx")
+    area_path = os.path.join(PROJ_PATH, "data/external_data/areas.txt")
+    eng2ch_name_path = os.path.join(PROJ_PATH, "data/external_data/ForeignName2CHName.json.json")
+    ext_fun_path = os.path.join(PROJ_PATH, "data/external_data/funnctions.json")
+    mec = MedicalEntCleaner(areas_path=area_path, foreign_name2ch_name_path=eng2ch_name_path,
+                            external_fun_path=ext_fun_path)
+    res = mec.clean_ori_data(read_path, save_path, xls_save_path)
     # MedicalEntCleaner.get_single_char_for_spec(save_path)
-    MedicalEntCleaner.convert_ent_to_xlsx(
-        r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_ents_added_fun.bin",
-        "ents.xlsx")
+    # MedicalEntCleaner.convert_ent_to_xlsx(
+    #     r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_ents_added_fun.bin",
+    #     "ents.xlsx")

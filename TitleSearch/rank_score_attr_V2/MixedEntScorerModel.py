@@ -67,6 +67,7 @@ class MixedEntScorerModel(torch.nn.Module):
         functions_score = self.modules["functions"](**ipts["functions"])
         place_score = self.modules["place"](**ipts["place"])
         spec_score = self.modules["spec"](**ipts["spec"])
+        # TODO 使用 两个全连接层
         total_score = name_score + company_score + bases_score + functions_score + place_score + spec_score
         # total_score = name_score  + bases_score + functions_score
         return {"total_score": total_score, "name_score": name_score, "company_score": company_score,
