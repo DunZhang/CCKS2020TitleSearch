@@ -26,14 +26,20 @@ logger = logging.getLogger(__name__)
 
 class MedicalEntCleaner:
     def __init__(self, areas_path: str, foreign_name2ch_name_path: str = None, external_fun_path: str = None):
-        # TODO 考虑是否需要把这些东西全都去掉
+        # 无用的公司后缀名前缀名
         self.company_names = ["生物工程有限公司", "制药有限责任公司", "制药有限公司", "药业股份有限公司", "药业集团有限公司", "药业有限公司",
                               "生物科技股份有限公司", "制药股份有限公司", "医疗器械有限公司", "生物电子技术有限公司",
                               "国际贸易有限公司", "药业有限责任公司", "生物医药科技有限公司", "医药股份有限公司",
                               "药业集团股份有限公司", "股份有限公司", "有限公司", "公司", "株式会社"]
+        # 属性名
         self.attr_names = ["生产企业", "主要成分", "症状", "规格", "产地", "功能"]
+        # 基本单位
         self.basic_unit = ["片", "粒", "胶囊", "瓶", "盒", "支", "颗粒", "膏药", "膏", "台", "板", "袋", "包", "丸", "贴",
-                           "只", "个", "液", "凝胶", "条", "水", ]
+                           "只", "个", "液", "凝胶", "条", "水", "毫克", "毫升", "厘米", "克", "毫米", "ml", "mg", "cm", "mm", "g"]
+        # 基本单位 英文->中文
+        self.basic_unit2ch_name = {"mg": "毫克", "ml": "毫升", "cm": "厘米", "g": "克", "mm": "毫米"}
+        # 数字模式
+        self.digit_pattern = re.compile("\d\.{0,1}\d*")
         logger.info("读取国家地区省份信息...")
         self.areas_path = areas_path
         self.all_areas = None
@@ -162,13 +168,24 @@ class MedicalEntCleaner:
             else:
                 text = ""
         text = Opencc.to_simple(str(text).strip())
-        units = []
+        text = text.replace("包装", "")
+        name = name.replace("包邮", "")
+        # 匹配基本单位
+        spec_info = []
         for i in self.basic_unit:
             if i in text or i in name:
-                units.append(i)
-        if len(units) < 1 and "s" in text:
-            units = ["片"]
-        return ";".join(units)
+                spec_info.append(i)
+                text = text.replace(i, "")
+                name = name.replace(i, "")
+                if i in self.basic_unit2ch_name:  # 考虑中文
+                    spec_info.append(self.basic_unit2ch_name[i])
+
+        if len(spec_info) < 1 and "s" in text:
+            spec_info = ["片"]
+        # 数量
+        for i in re.findall(self.digit_pattern, text):
+            spec_info.append(i)
+        return ";".join(spec_info)
 
     def clean_name(self, text):
         """
