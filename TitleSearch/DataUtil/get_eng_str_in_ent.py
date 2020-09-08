@@ -15,10 +15,11 @@ if __name__ == "__main__":
         data = pickle.load(fr)
     for v in data.values():
         name = v["company"]
+        name = v["name"]
         ss = name.strip().split("\t")
         sen = ss[0]
         find_res = re.findall(pattern, sen)
         if len(find_res) > 0:
-            print(sen)
-            print(find_res[0].strip())
-            print("\n")
+            print(sen.lower())
+            # print(find_res[0].strip())
+            # print("\n")
