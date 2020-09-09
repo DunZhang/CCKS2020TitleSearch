@@ -99,7 +99,7 @@ from collections import Counter, defaultdict
 # attrs = list(set(attrs))
 
 # In[] 观察训练集LabelID分布情况
-# train_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_label_data.txt"
+# train_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\medical_label_data.txt"
 #
 # with open(train_path, "r", encoding="utf8") as fr:
 #     train_data = [line.strip().split("\t") for line in fr if len(line.strip().split("\t")) == 2]
@@ -114,33 +114,33 @@ from collections import Counter, defaultdict
 # print(len([1 for i in res if i[1] > 1]))
 
 # In[] 观察实体库的空值情况
-'''
-
-{'Publication': defaultdict(int,
-             {'出版社': 272618,
-              '作者': 272618,
-              '出版时间': 272618,
-              '卷数': 272618,
-              '装帧': 272618}),
-
- 'Medical': defaultdict(int,
-             {'生产企业': 4678,
-              '主要成分': 4678,
-              '症状': 4678,
-              '规格': 4678,
-              '产地': 1791,
-              '功能': 2887})}
-'''
-read_path  = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_entity_kb.json"
-with open(read_path,"r",encoding="utf8") as fr:
-    for line in fr:
-        train_data.append(json.loads(line))
-
-di = {}
-for i in data:
-    product_type = i["type"]
-    if product_type not in di:
-        di[product_type] = defaultdict(int)
-    for j in i["data"]:
-        pred = j["predicate"]
-        di[product_type][pred] +=1
+# '''
+#
+# {'Publication': defaultdict(int,
+#              {'出版社': 272618,
+#               '作者': 272618,
+#               '出版时间': 272618,
+#               '卷数': 272618,
+#               '装帧': 272618}),
+#
+#  'Medical': defaultdict(int,
+#              {'生产企业': 4678,
+#               '主要成分': 4678,
+#               '症状': 4678,
+#               '规格': 4678,
+#               '产地': 1791,
+#               '功能': 2887})}
+# '''
+# read_path  = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_entity_kb.json"
+# with open(read_path,"r",encoding="utf8") as fr:
+#     for line in fr:
+#         train_data.append(json.loads(line))
+#
+# di = {}
+# for i in data:
+#     product_type = i["type"]
+#     if product_type not in di:
+#         di[product_type] = defaultdict(int)
+#     for j in i["data"]:
+#         pred = j["predicate"]
+#         di[product_type][pred] +=1

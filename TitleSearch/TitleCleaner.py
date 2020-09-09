@@ -37,11 +37,14 @@ class TitleCleaner():
             fw.writelines(data)
 
     @classmethod
-    def format_ori_data(cls, read_path, kb_path, train_save_path, dev_save_path, label_data_decoded_path=None):
+    def format_ori_data(cls, read_path, medical_ent_path, book_ent_path, medical_save_path=None, book_save_path=None,
+                        label_data_decoded_path=None):
         # get kb
-        with open(kb_path, "rb") as fr:
-            kb = pickle.load(fr)
-        data = []
+        with open(medical_ent_path, "rb") as fr:
+            medical_ents = pickle.load(fr)
+        with open(book_ent_path, "rb") as fr:
+            book_ents = pickle.load(fr)
+        medical_data, book_data = [], []
         ori_data = []
         text_id_set = set()
         with open(read_path, "r", encoding="utf8") as fr:
@@ -60,28 +63,36 @@ class TitleCleaner():
                 text_id_set.add(text_id)
                 for item in di["implicit_entity"]:
                     label_id = str(item['subject_id']).strip()
-                    if label_id in kb:
-                        data.append("{}\t{}\n".format(text, label_id))
-        for i in data:
+                    if label_id in medical_ents:
+                        medical_data.append("{}\t{}\n".format(text, label_id))
+                    elif label_id in book_ents:
+                        book_data.append("{}\t{}\n".format(text, label_id))
+        for i in medical_data + book_data:
             assert len(i.split("\t")) == 2
-        random.shuffle(data)
+        random.shuffle(medical_data)
+        random.shuffle(book_data)
         print(len(text_id_set))
-        # with open(train_save_path, "w", encoding="utf8") as fw:
-        #     fw.writelines(data[1000:])
-        # with open(dev_save_path, "w", encoding="utf8") as fw:
-        #     fw.writelines(data[:1000])
-        #
-        # if label_data_decoded_path:
-        #     with open(label_data_decoded_path, "w", encoding="utf8") as fw:
-        #         fw.writelines(ori_data)
+
+        if medical_save_path:
+            with open(medical_save_path, "w", encoding="utf8") as fw:
+                fw.writelines(medical_data)
+        if book_save_path:
+            with open(book_save_path, "w", encoding="utf8") as fw:
+                fw.writelines(book_data)
+        if label_data_decoded_path:
+            with open(label_data_decoded_path, "w", encoding="utf8") as fw:
+                fw.writelines(ori_data)
 
 
 if __name__ == "__main__":
-    read_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\ori_data\train.txt"
-    kb_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_ents.bin"
-    train_save_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\rank_score_attr\train.txt"
-    dev_save_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\rank_score_attr\dev.txt"
-    # label_data_decoded_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_label_data_decode.txt"
-    TitleCleaner.format_ori_data(read_path, kb_path, train_save_path, dev_save_path)
+    read_path = r"G:\Codes\CCKS2020TitleSearch\data\ori_data\train.txt"
+    medical_ent_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\medical_ents.bin"
+    book_ent_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\book_ents.bin"
+
+    medical_save_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\medical_label_data.txt"
+    book_save_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\book_label_data.txt"
+    label_data_decoded_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\all_label_data_decode.txt"
+    TitleCleaner.format_ori_data(read_path, medical_ent_path, book_ent_path, medical_save_path, book_save_path,
+                                 label_data_decoded_path)
     # TitleCleaner.clean_test_data(r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\ori_data\dev.txt",
     #                              r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\test_data.txt")
