@@ -30,4 +30,3 @@ class TitleTypeCLFModel(torch.nn.Module):
         self.bert.save_pretrained(save_dir)
         self.tokenizer.save_pretrained(save_dir)
         torch.save(self.fc.state_dict(), os.path.join(save_dir, "classifier.bin"))
-
