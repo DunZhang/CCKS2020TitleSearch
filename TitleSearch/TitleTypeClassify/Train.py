@@ -1,13 +1,14 @@
-import os
-import torch
 import logging
-from transformers import BertTokenizer, BertModel
-from TitleCLFDataSet import TitleCLFDataSet
+import os
+
+import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from TitleTypeCLFModel import TitleTypeCLFModel
-import json
+from transformers import BertTokenizer
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
+
 from Evaluate import eval
+from TitleCLFDataSet import TitleCLFDataSet
+from TitleTypeCLFModel import TitleTypeCLFModel
 
 
 def train(conf):
@@ -18,9 +19,9 @@ def train(conf):
     ### directory
     os.makedirs(conf.out_dir, exist_ok=True)
     best_model_dir = os.path.join(conf.out_dir, "best_model")
-    os.makedirs(best_model_dir)
+    os.makedirs(best_model_dir, exist_ok=True)
     latest_model_dir = os.path.join(conf.out_dir, "latest_model")
-    os.makedirs(latest_model_dir)
+    os.makedirs(latest_model_dir, exist_ok=True)
     ### global variables
     best_acc = -1
     loss_fw = open(os.path.join(conf.out_dir, "loss.txt"), "w", encoding="utf8")
@@ -44,15 +45,15 @@ def train(conf):
     dev_data_set = TitleCLFDataSet(file_path=conf.dev_file_path, tokenizer=tokenizer, max_len=conf.seq_length)
     dev_data_loader = DataLoader(dataset=dev_data_set, batch_size=conf.batch_size,
                                  sampler=SequentialSampler(dev_data_set))
-    ### test data
-    if conf.test_file_path and os.path.exists(conf.test_file_path):
-        logging.info("get test data loader...")
-        test_data_set = TitleCLFDataSet(file_path=conf.test_file_path, tokenizer=tokenizer, max_len=conf.seq_length)
-        test_data_loader = DataLoader(dataset=test_data_set, batch_size=conf.batch_size,
-                                      sampler=SequentialSampler(test_data_set))
-    else:
-        logging.warning("not provide test file path")
-        test_data_loader = None
+    # ### test data
+    # if conf.test_file_path and os.path.exists(conf.test_file_path):
+    #     logging.info("get test data loader...")
+    #     test_data_set = TitleCLFDataSet(file_path=conf.test_file_path, tokenizer=tokenizer, max_len=conf.seq_length)
+    #     test_data_loader = DataLoader(dataset=test_data_set, batch_size=conf.batch_size,
+    #                                   sampler=SequentialSampler(test_data_set))
+    # else:
+    #     logging.warning("not provide test file path")
+    #     test_data_loader = None
 
     ### model
     logging.info("define model...")
@@ -124,11 +125,11 @@ def train(conf):
                     clf_model.save(best_model_dir)
                 clf_model.save(latest_model_dir)
                 ### test dataset
-                if test_data_loader:
-                    test_res, _ = eval(clf_model, test_data_loader, conf.device)
-                    logging.info(
-                        "epoch:{},\tstep:{}/{}, test eval result:".format(epoch, step, steps_per_epoch))
-                    logging.info("\n{}".format(test_res))
+                # if test_data_loader:
+                #     test_res, _ = eval(clf_model, test_data_loader, conf.device)
+                #     logging.info(
+                #         "epoch:{},\tstep:{}/{}, test eval result:".format(epoch, step, steps_per_epoch))
+                #     logging.info("\n{}".format(test_res))
 
     acc_fw.close()
     loss_fw.close()

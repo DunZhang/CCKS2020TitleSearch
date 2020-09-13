@@ -9,4 +9,5 @@ import torch
 
 # TODO 这个代码你自行补全
 if __name__ == "__main__":
+    print('done')
     pass
