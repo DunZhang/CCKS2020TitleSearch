@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 from transformers import BertTokenizer
-
+import re
 
 class TitleCLFDataSet(Dataset):
     def __init__(self, file_path: str, tokenizer: BertTokenizer, label2id: dict = None, max_len: int = 128,
@@ -28,6 +28,7 @@ class TitleCLFDataSet(Dataset):
                     if len(ss) != 1:
                         continue
                     sen = ss[0].strip()
+                    sen = re.sub("\s", '', sen)
                     sens.append(sen)
 
         res = tokenizer.batch_encode_plus(batch_text_or_text_pairs=sens,
