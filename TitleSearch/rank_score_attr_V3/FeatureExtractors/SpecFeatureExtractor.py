@@ -29,6 +29,9 @@ class SpecFeatureExtractor(AAttrFeatureExtractor):
     def get_num_features(self) -> int:
         return 1
 
+    def get_names(self) -> List[str]:
+        return ["SpecNumSameChar"]
+
 
 if __name__ == "__main__":
     cfe = SpecFeatureExtractor()

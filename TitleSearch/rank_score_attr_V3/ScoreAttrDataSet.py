@@ -34,11 +34,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 class ScoreAttrDataSet():
     def __init__(self, file_path, ent_path, tokenizer: BertTokenizer, afes,
-                 batch_size=32, topk_searcher: ITopKSearcher = None):
+                 batch_size=32, max_sum_sens=None, topk_searcher: ITopKSearcher = None, use_manual_feature=False):
         self.batch_size = batch_size
         self.tokenizer = tokenizer
         self.afes = afes
         self.topk_searcher = topk_searcher
+        self.use_manual_feature = use_manual_feature
         self.num_examples_per_record = 5  # 每个数据生成的负类个数
         self.ipt_names = ["input_ids", "attention_mask", "token_type_ids", "null_val_mask"]
         self.attr2len = {"name": 50, "company": 40, "bases": 70, "functions": 70, "place": 40}
@@ -61,6 +62,8 @@ class ScoreAttrDataSet():
             for line in fr:
                 ss = line.strip().split("\t")
                 self.titles.append(ss)
+        if max_sum_sens:
+            self.titles = random.sample(self.titles, max_sum_sens)
         logger.info("完成读取数据")
         # 把title和训练数据都变成topken_id
         logger.info("训练数据变为token id...")
@@ -165,10 +168,16 @@ class ScoreAttrDataSet():
         return all_trples
 
     def gen_triples(self, title, title_ids, ent_id):
-        """ 为一个title和ent生成triples 即(anchor,pos,neg) """
+        """
+        为一个title和ent生成triples 即(anchor,pos,neg)
+        :param title: 问题文本
+        :param title_ids: 问题对应 bert token ids
+        :param ent_id: title 对应的ent id
+        :return:
+        """
         res = []
         if self.topk_searcher:
-            topk_ent_ids = self.topk_searcher.get_topk_ent_ids(title, topk=20)
+            topk_ent_ids = self.topk_searcher.get_topk_ent_ids(title, topk=25)
             if ent_id in topk_ent_ids:
                 topk_ent_ids.remove(ent_id)
             topk_ent_ids = random.sample(topk_ent_ids, self.num_examples_per_record)
@@ -196,12 +205,12 @@ class ScoreAttrDataSet():
             neg_ent_ids = [i[3] for i in all_triples]
             logger.info("把所有triples组合成bert的输入...")
             self.get_bert_model_input(titles_ids, pos_ent_ids, neg_ent_ids)
-            logger.info("把所有triples组合成手工特征打分器的输入...")
-            self.get_manual_model_input(titles, pos_ent_ids, neg_ent_ids)
+            if self.use_manual_feature:
+                logger.info("把所有triples组合成手工特征打分器的输入...")
+                self.get_manual_model_input(titles, pos_ent_ids, neg_ent_ids)
             logger.info("完成把所有triples组合")
             logger.info("==============================all input data shape================================")
             logger.info(self.pos_ipts["name"]["input_ids"].shape)
-            logger.info(self.pos_ipts["company"]["features"].shape)
             self.start, self.end = 0, self.batch_size
         else:
             self.start = self.end
@@ -215,8 +224,9 @@ class ScoreAttrDataSet():
             pos_ent_ids = [i[2] for i in all_triples]
             neg_ent_ids = [i[3] for i in all_triples]
             self.get_bert_model_input(titles_ids, pos_ent_ids, neg_ent_ids)
-            logger.info("把所有triples组合成手工特征打分器的输入...")
-            self.get_manual_model_input(titles, pos_ent_ids, neg_ent_ids)
+            if self.use_manual_feature:
+                logger.info("把所有triples组合成手工特征打分器的输入...")
+                self.get_manual_model_input(titles, pos_ent_ids, neg_ent_ids)
             logger.info("完成把所有triples组合")
             self.start, self.end = 0, self.batch_size
             raise StopIteration
@@ -231,25 +241,34 @@ class ScoreAttrDataSet():
             for ipt_name in self.ipt_names:
                 batch_neg[attr_name][ipt_name] = self.neg_ipts[attr_name][ipt_name][self.start:self.end]
         ##########
-        for attr_name in ["company", "bases", "place", "spec"]:
-            batch_pos[attr_name] = {}
-            batch_pos[attr_name]["features"] = self.pos_ipts[attr_name]["features"][self.start:self.end]
-        for attr_name in ["company", "bases", "place", "spec"]:
-            batch_neg[attr_name] = {}
-            batch_neg[attr_name]["features"] = self.neg_ipts[attr_name]["features"][self.start:self.end]
+        if self.use_manual_feature:
+            for attr_name in ["company", "bases", "place", "spec"]:
+                batch_pos[attr_name] = {}
+                batch_pos[attr_name]["features"] = self.pos_ipts[attr_name]["features"][self.start:self.end]
+            for attr_name in ["company", "bases", "place", "spec"]:
+                batch_neg[attr_name] = {}
+                batch_neg[attr_name]["features"] = self.neg_ipts[attr_name]["features"][self.start:self.end]
         return batch_pos, batch_neg
 
 
+from os.path import join
+import sys
+
+if "win" in sys.platform:
+    PROJ_PATH = r"G:\Codes\CCKS2020TitleSearch"
+else:
+    PROJ_PATH = "/home/wcm/ZhangDun/CCKS2020TitleSearch"
 if __name__ == "__main__":
-    areas_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\areas.txt"
-    file_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\rank_score_attr\dev.txt"
-    kb_path = r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\medical_ents.bin"
-    model_path = r"G:\Data\roberta_tiny_clue"
+    stop_words_path = join(PROJ_PATH, "data/external_data/stop_words.txt")
+    areas_path = r"G:\Codes\CCKS2020TitleSearch\data\external_data\areas.txt"
+    file_path = r"G:\Codes\CCKS2020TitleSearch\data\rank_score_attr\dev.txt"
+    kb_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\medical_ents.bin"
+    model_path = join(PROJ_PATH, "PreTrainedModels/roberta_tiny_clue")
     tokenizer = BertTokenizer.from_pretrained(model_path)
     topk_searcher = TopKSearcherBasedRFIJSRes(
-        r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\rank_score_attr\dev_topk_ent_ids.bin")
+        r"G:\Codes\CCKS2020TitleSearch\data\rank_score_attr\dev_topk_ent_ids.bin")
     afes = {"company": CompanyFeatureExtractor(),
-            "bases": BasesFeatureExtractor(),
+            "bases": BasesFeatureExtractor(stop_words_path),
             "place": CountryFeatureExtractor(areas_path),
             "spec": SpecFeatureExtractor()}
     data = ScoreAttrDataSet(file_path, kb_path, tokenizer, afes=afes, batch_size=3, topk_searcher=topk_searcher)

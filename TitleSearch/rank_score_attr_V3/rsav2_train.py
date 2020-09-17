@@ -2,12 +2,16 @@ import os
 import torch
 import logging
 from transformers import BertTokenizer
-from RSEEntScorerModel import RSEEntScorerModel
+from MixedEntScorerModel import MixedEntScorerModel
 
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
-from ScoreEntDataSet import ScoreEntDataSet
+from ScoreAttrDataSet import ScoreAttrDataSet
 from TopKSearcherBasedRFIJSRes import TopKSearcherBasedRFIJSRes
-from RSEEvaluator import RSEEvaluator
+from RSAV2Evaluator import RSAV2Evaluator
+from BasesFeatureExtractor import BasesFeatureExtractor
+from CompanyFeatureExtractor import CompanyFeatureExtractor
+from CountryFeatureExtractor import CountryFeatureExtractor
+from SpecFeatureExtractor import SpecFeatureExtractor
 
 
 def train(conf):
@@ -34,8 +38,13 @@ def train(conf):
     # train data
     logging.info("get train data loader...")
     tokenizer = BertTokenizer.from_pretrained(conf.pretrain_model_path)
-    train_data_iter = ScoreEntDataSet(file_path=conf.train_file_path, ent_path=conf.ent_path, tokenizer=tokenizer,
-                                      batch_size=conf.batch_size, topk_searcher=train_topk_searcher)
+    afes = {"company": CompanyFeatureExtractor(),
+            "bases": BasesFeatureExtractor(conf.stop_words_path),
+            "place": CountryFeatureExtractor(conf.areas_path),
+            "spec": SpecFeatureExtractor()}
+    train_data_iter = ScoreAttrDataSet(file_path=conf.train_file_path, ent_path=conf.ent_path, tokenizer=tokenizer,
+                                       afes=afes, batch_size=conf.batch_size, max_sum_sens=conf.max_num_sens,
+                                       topk_searcher=train_topk_searcher, use_manual_feature=conf.use_manual_feature)
 
     total_steps = int(train_data_iter.steps * conf.num_epochs)
     steps_per_epoch = train_data_iter.steps
@@ -44,11 +53,13 @@ def train(conf):
     else:
         warmup_steps = int(conf.warmup)
     # get dev evaluator
-    evaluator = RSEEvaluator(file_path=conf.dev_file_path, ent_path=conf.ent_path, tokenizer=tokenizer,
-                             topk_searcher=dev_topk_searcher, device=conf.device, task_name="dev")
+    evaluator = RSAV2Evaluator(file_path=conf.dev_file_path, ent_path=conf.ent_path, tokenizer=tokenizer, afes=afes,
+                               topk_searcher=dev_topk_searcher, device=conf.device, task_name="dev",
+                               use_manual_feature=conf.use_manual_feature)
     # model
     logging.info("define model...")
-    model = RSEEntScorerModel(conf.pretrain_model_path).to(conf.device)
+    model = MixedEntScorerModel(conf.pretrain_model_path, share_bert_weight=conf.share_bert_weight,
+                                use_manual_feature=conf.use_manual_feature).to(conf.device)
     model.train()
     # optimizer
     logging.info("define optimizer...")
@@ -76,14 +87,27 @@ def train(conf):
             global_step += 1
             step += 1
             for data_di in batch_data:
-                for ipt_name in data_di:
-                    data_di[ipt_name] = data_di[ipt_name].to(conf.device)
-            pos_score = model(**batch_data[0])
-            neg_score = model(**batch_data[1])
+                for ipts in data_di.values():
+                    for ipt_name in ipts:
+                        ipts[ipt_name] = ipts[ipt_name].to(conf.device)
+            pos_score = model(batch_data[0])["total_score"]
+            neg_score = model(batch_data[1])["total_score"]
             if step < 2:
-                for ipt_name in train_data_iter.ipt_names:
-                    print(ipt_name, batch_data[0][ipt_name].shape)
+                for attr_name in ["name"]:
+                    print("=========================== {} ===================================".format(attr_name))
+                    print(tokenizer.decode(batch_data[0][attr_name]["input_ids"][0].cpu().data.numpy().tolist()))
+                    print(batch_data[0][attr_name]["input_ids"][0].cpu().data.numpy().tolist())
+                    print(batch_data[0][attr_name]["attention_mask"][0])
+                    print(batch_data[0][attr_name]["token_type_ids"][0])
+                    print(batch_data[0][attr_name]["null_val_mask"][0])
+                    print("------------------------------------------------------------------------------------")
+                    print(tokenizer.decode(batch_data[1][attr_name]["input_ids"][0].cpu().data.numpy().tolist()))
+                    print(batch_data[1][attr_name]["input_ids"][0].cpu().data.numpy().tolist())
+                    print(batch_data[1][attr_name]["attention_mask"][0])
+                    print(batch_data[1][attr_name]["token_type_ids"][0])
+                    print(batch_data[1][attr_name]["null_val_mask"][0])
                 print("score shape", pos_score.shape, neg_score.shape)
+
             loss = torch.nn.functional.relu(neg_score - pos_score + conf.margin)
             loss = loss.mean()
             loss.backward()
@@ -97,7 +121,7 @@ def train(conf):
                 loss_fw.write("epoch:{},\tstep:{}/{},\tloss:{}\n".format(epoch, step, steps_per_epoch, loss.data))
                 loss_fw.flush()
 
-            if step % conf.evaluation_steps == 0 or step == 10:
+            if step % conf.evaluation_steps == 0:
                 logging.info("start evaluate...")
                 acc = evaluator.eval(model)
                 if acc > best_acc:

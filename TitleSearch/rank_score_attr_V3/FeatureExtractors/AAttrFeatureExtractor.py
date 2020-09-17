@@ -14,3 +14,7 @@ class AAttrFeatureExtractor(metaclass=ABCMeta):
     @abstractmethod
     def get_num_features(self) -> int:
         pass
+
+    @abstractmethod
+    def get_names(self) -> List[str]:
+        pass

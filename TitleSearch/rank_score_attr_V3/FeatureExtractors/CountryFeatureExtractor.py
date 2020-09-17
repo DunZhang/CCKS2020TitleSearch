@@ -34,8 +34,8 @@ class CountryFeatureExtractor(AAttrFeatureExtractor):
 
     def extract_features(self, title: str, attr_values: List[str]) -> List[List[float]]:
         title_areas = self.title_contain_attr(title)
-        if not title_areas:  # title 不包含国家地区信息，返回平均值0.5
-            return [[0.5] for _ in range(len(attr_values))]
+        if not title_areas:  # title 不包含国家地区信息，返回平均值0.0
+            return [[0.0] for _ in range(len(attr_values))]
         ###
         fes = []
         for attr_value in attr_values:
@@ -44,9 +44,9 @@ class CountryFeatureExtractor(AAttrFeatureExtractor):
                 continue
             # print(attr_value)
             attr_areas = set([self.area2name[i] for i in attr_value.split(";")])
-            if title_areas.isdisjoint(attr_areas): # 两者都包含地区信息，但是地区不同
+            if title_areas.isdisjoint(attr_areas):  # 两者都包含地区信息，但是地区不同
                 fes.append([0.0])
-            else: # 有相同地区
+            else:  # 有相同地区
                 fes.append([1.0])
         return fes
 
@@ -61,6 +61,9 @@ class CountryFeatureExtractor(AAttrFeatureExtractor):
 
     def get_num_features(self) -> int:
         return 1
+
+    def get_names(self) -> List[str]:
+        return ["CountryNumSameCountry"]
 
 
 if __name__ == "__main__":

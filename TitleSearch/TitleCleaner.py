@@ -92,7 +92,7 @@ if __name__ == "__main__":
     medical_save_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\medical_label_data.txt"
     book_save_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\book_label_data.txt"
     label_data_decoded_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\all_label_data_decode.txt"
-    TitleCleaner.format_ori_data(read_path, medical_ent_path, book_ent_path, medical_save_path, book_save_path,
-                                 label_data_decoded_path)
-    # TitleCleaner.clean_test_data(r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\ori_data\dev.txt",
-    #                              r"G:\Codes\PythonProj\CCKS2020TitleSearch\data\format_data\test_data.txt")
+    # TitleCleaner.format_ori_data(read_path, medical_ent_path, book_ent_path, medical_save_path, book_save_path,
+    #                              label_data_decoded_path)
+    TitleCleaner.clean_test_data(r"G:\Codes\CCKS2020TitleSearch\data\ori_data\final_test.txt",
+                                 r"G:\Codes\CCKS2020TitleSearch\data\format_data\final_test.txt")

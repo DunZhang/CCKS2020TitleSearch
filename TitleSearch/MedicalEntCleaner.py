@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class MedicalEntCleaner:
-    def __init__(self, areas_path: str, foreign_name2ch_name_path: str = None, external_fun_path: str = None):
+    def __init__(self, areas_path: str, foreign_name2ch_name_path: str = None, eng2ch_company_path: str = None,
+                 external_fun_path: str = None):
         # 无用的公司后缀名前缀名
         self.company_names = ["生物工程有限公司", "制药有限责任公司", "制药有限公司", "药业股份有限公司", "药业集团有限公司", "药业有限公司",
                               "生物科技股份有限公司", "制药股份有限公司", "医疗器械有限公司", "生物电子技术有限公司",
@@ -50,6 +51,12 @@ class MedicalEntCleaner:
         if foreign_name2ch_name_path and os.path.exists(foreign_name2ch_name_path):
             with open(foreign_name2ch_name_path, "r", encoding="utf8") as fr:
                 self.eng_name2ch_name = json.load(fr)
+        logger.info("加载中英文公司...")
+        self.eng_comp2ch_comp = {}
+        if eng2ch_company_path and os.path.exists(eng2ch_company_path):
+            with open(eng2ch_company_path, "r", encoding="utf8") as fr:
+                self.eng_comp2ch_comp = json.load(fr)
+
         logger.info("加载外部实体功能表...")
         self.ext_fun = {}
         if external_fun_path and os.path.exists(external_fun_path):
@@ -133,11 +140,18 @@ class MedicalEntCleaner:
         ss = [i.strip() for i in ss]
         places = [i for i in ss if len(i) > 1 and i != "nan" and i.lower() != "none"]
         ### 清洗  company
-        company_text = Opencc.to_simple(str(company_text)).strip()
+        company_text = Opencc.to_simple(str(company_text)).strip().lower()
         company_text = re.sub("其他", "", company_text)
+
         ss = re.split(";+", company_text)
         ss = [i.strip() for i in ss]
         comp_list = [i for i in ss if len(i) > 1 and i != "nan" and i.lower() != "none"]
+        # 添加英文对应的中文
+        t = [self.eng_comp2ch_comp[i] for i in comp_list if i in self.eng_comp2ch_comp]
+        comp_list.extend(t)
+        if len(t) > 0:
+            print("中英文公司名", t)
+
         companies = []
         for i in comp_list:
             comps, countries = self.clean_extract_company(i)
@@ -317,9 +331,10 @@ if __name__ == "__main__":
     xls_save_path = os.path.join(PROJ_PATH, "data/format_data/medical_ents.xlsx")
     area_path = os.path.join(PROJ_PATH, "data/external_data/areas.txt")
     eng2ch_name_path = os.path.join(PROJ_PATH, "data/external_data/ForeignName2CHName.json.json")
+    eng2ch_company_path = os.path.join(PROJ_PATH, "data/external_data/ForeignName2CHName.json.json")
     ext_fun_path = os.path.join(PROJ_PATH, "data/external_data/funnctions.json")
     mec = MedicalEntCleaner(areas_path=area_path, foreign_name2ch_name_path=eng2ch_name_path,
-                            external_fun_path=ext_fun_path)
+                            eng2ch_company_path=eng2ch_company_path, external_fun_path=ext_fun_path)
     res = mec.clean_ori_data(read_path, save_path, xls_save_path)
     # MedicalEntCleaner.get_single_char_for_spec(save_path)
     # MedicalEntCleaner.convert_ent_to_xlsx(
