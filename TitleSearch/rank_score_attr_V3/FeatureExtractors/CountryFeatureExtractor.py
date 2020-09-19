@@ -40,7 +40,7 @@ class CountryFeatureExtractor(AAttrFeatureExtractor):
         fes = []
         for attr_value in attr_values:
             if DataUtil.is_null(attr_value):  # 实体不包含地区信息
-                fes.append([0.2])
+                fes.append([0.0])
                 continue
             # print(attr_value)
             attr_areas = set([self.area2name[i] for i in attr_value.split(";")])

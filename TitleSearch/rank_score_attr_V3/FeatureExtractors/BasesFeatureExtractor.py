@@ -40,11 +40,10 @@ class BasesFeatureExtractor(AAttrFeatureExtractor):
         fes = []
         for attr_value, attr_value_set, attr_value_seg_set in zip(attr_values, attr_values_set, attr_values_seg_set):
             if DataUtil.is_null(attr_value):
-                fes.append([0.0, 0.0])
+                fes.append([0.0])
                 continue
             fes.append(
-                [len(attr_value_set.intersection(title_set)) * 1.0,
-                 len(attr_value_seg_set.intersection(title_seg_set)) * 1.0])
+                [len(attr_value_seg_set.intersection(title_seg_set)) * 1.0])
         return fes
 
     def txt2set(self, txt: str):
@@ -57,7 +56,7 @@ class BasesFeatureExtractor(AAttrFeatureExtractor):
         raise NotImplementedError
 
     def get_num_features(self) -> int:
-        return 2
+        return 1
 
     def get_names(self):
         return ["BaseNumSameChar", "BaseNumSameWord"]

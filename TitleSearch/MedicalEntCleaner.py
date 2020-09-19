@@ -140,6 +140,7 @@ class MedicalEntCleaner:
         ss = [i.strip() for i in ss]
         places = [i for i in ss if len(i) > 1 and i != "nan" and i.lower() != "none"]
         ### 清洗  company
+        company_text = re.sub("；", "", company_text)
         company_text = Opencc.to_simple(str(company_text)).strip().lower()
         company_text = re.sub("其他", "", company_text)
 

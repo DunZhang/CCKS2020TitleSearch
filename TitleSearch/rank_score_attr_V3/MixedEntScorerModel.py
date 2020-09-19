@@ -59,18 +59,28 @@ class MixedEntScorerModel(torch.nn.Module):
         for k, v in self.modules.items():
             self.add_module(k, v)
 
+    # def forward(self, ipts):
+    #     name_score = self.modules["name"](**ipts["name"])
+    #     functions_score = self.modules["functions"](**ipts["functions"])
+    #     zeros = functions_score * 0
+    #     company_score, bases_score, place_score, spec_score = zeros, zeros, zeros, zeros
+    #     if self.use_manual_feature:
+    #         company_score = self.modules["company"](**ipts["company"])
+    #         bases_score = self.modules["bases"](**ipts["bases"])
+    #         place_score = self.modules["place"](**ipts["place"])
+    #         spec_score = self.modules["spec"](**ipts["spec"])
+    #
+    #     total_score = name_score + functions_score + company_score + bases_score + place_score + spec_score
+    #     return {"total_score": total_score, "name_score": name_score, "company_score": company_score,
+    #             "bases_score": bases_score, "functions_score": functions_score, "place_score": place_score,
+    #             "spec_score": spec_score}
+    # 只使用name 临时测试用
     def forward(self, ipts):
         name_score = self.modules["name"](**ipts["name"])
-        functions_score = self.modules["functions"](**ipts["functions"])
-        zeros = functions_score * 0
-        company_score, bases_score, place_score, spec_score = zeros, zeros, zeros, zeros
-        if self.use_manual_feature:
-            company_score = self.modules["company"](**ipts["company"])
-            bases_score = self.modules["bases"](**ipts["bases"])
-            place_score = self.modules["place"](**ipts["place"])
-            spec_score = self.modules["spec"](**ipts["spec"])
+        zeros = name_score * 0
+        functions_score, company_score, bases_score, place_score, spec_score = zeros, zeros, zeros, zeros, zeros
 
-        total_score = name_score + functions_score + company_score + bases_score + place_score + spec_score
+        total_score = name_score
         return {"total_score": total_score, "name_score": name_score, "company_score": company_score,
                 "bases_score": bases_score, "functions_score": functions_score, "place_score": place_score,
                 "spec_score": spec_score}

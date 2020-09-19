@@ -56,7 +56,7 @@ if __name__ == "__main__":
     upload = []
     c = 0
     for i in res:
-        if i[2][0]>0.95:
+        if i[2][0]>=0.99:
             c +=1
             upload.append(str(sen2id[i[1][0]])+"\n")
             data.append([i[0],i[1][0],i[2][0],sen2id[i[1][0]]])
@@ -67,6 +67,6 @@ if __name__ == "__main__":
         #     data.append([i[0],j,k])
     # pd.DataFrame(data,columns=["测试问题","训练集问题","score","EntID"]).to_excel("testsen.xlsx",index=False)
     
-    print(c/len(res),len(res)-c)
-    with open("95.txt","w",encoding="utf8") as fw:
+    print(c/len(res),len(res)-c,c)
+    with open("99.txt","w",encoding="utf8") as fw:
         fw.writelines(upload)

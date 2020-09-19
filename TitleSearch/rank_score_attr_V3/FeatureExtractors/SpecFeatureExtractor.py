@@ -20,7 +20,8 @@ class SpecFeatureExtractor(AAttrFeatureExtractor):
                 fes.append([0.0])
                 continue
             # print(attr_value)
-            fes.append([sum([1.0 if i in title else 0.0 for i in attr_value.split(";")])])
+            unit_list = set(attr_value.split(";"))
+            fes.append([sum([1.0 if i in title else 0.0 for i in unit_list])])
         return fes
 
     def title_contain_attr(self, title: str, **kwargs) -> Union[None, str]:

@@ -41,7 +41,7 @@ parser.add_argument("--dev_topk_ent_path",
                     default=join(PROJ_PATH, "data/rank_score_attr/dev_topk_ent_ids.bin"),
                     type=str)
 # 保存模型位置
-parser.add_argument("--out_dir", default="rbt3_only_name_fun", type=str)
+parser.add_argument("--out_dir", default="rbt3_only_name", type=str)
 parser.add_argument("--max_num_sens", default=None, type=int)
 parser.add_argument("--train_file_path",
                     default=join(PROJ_PATH, "data/rank_score_attr/train.txt"),

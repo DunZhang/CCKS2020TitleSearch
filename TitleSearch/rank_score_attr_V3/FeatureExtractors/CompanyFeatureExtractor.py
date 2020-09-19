@@ -4,6 +4,7 @@ import logging
 import pickle
 import pandas as pd
 from DataUtil import DataUtil
+import pylcs
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,11 @@ class CompanyFeatureExtractor(AAttrFeatureExtractor):
                 fes.append([0.0])
                 continue
             # print(attr_value)
-            fes.append([len(set(attr_value).intersection(title_set)) * 1.0])
+            # fes.append([len(set(attr_value).intersection(title_set)) * 1.0])
+            lcs_len = pylcs.lcs2(title, attr_value)
+            if lcs_len < 2: lcs_len = 0.0
+            if lcs_len > 3: lcs_len = 3.0
+            fes.append([lcs_len])
         return fes
 
     def title_contain_attr(self, title: str, **kwargs) -> Union[None, str]:
@@ -31,6 +36,7 @@ class CompanyFeatureExtractor(AAttrFeatureExtractor):
 
     def get_names(self) -> List[str]:
         return ["CompanyNumSameChar"]
+
 
 if __name__ == "__main__":
     cfe = CompanyFeatureExtractor()
