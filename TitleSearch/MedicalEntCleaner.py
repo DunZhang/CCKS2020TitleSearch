@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class MedicalEntCleaner:
     def __init__(self, areas_path: str, foreign_name2ch_name_path: str = None, eng2ch_company_path: str = None,
-                 external_fun_path: str = None):
+                 external_fun_path: str = None, medical_data_path=None):
         # 无用的公司后缀名前缀名
         self.company_names = ["生物工程有限公司", "制药有限责任公司", "制药有限公司", "药业股份有限公司", "药业集团有限公司", "药业有限公司",
                               "生物科技股份有限公司", "制药股份有限公司", "医疗器械有限公司", "生物电子技术有限公司",
@@ -62,6 +62,17 @@ class MedicalEntCleaner:
         if external_fun_path and os.path.exists(external_fun_path):
             with open(external_fun_path, "r", encoding="utf8") as fr:
                 self.ext_fun = json.load(fr)
+        self.labelid2titles = {}
+        with open(medical_data_path, "r", encoding="utf8") as fr:
+            for line in fr:
+                ss = line.strip().split("\t")
+                if len(ss) != 2:
+                    continue
+                title, labelid = ss
+                if labelid in self.labelid2titles:
+                    self.labelid2titles[labelid].append(title)
+                else:
+                    self.labelid2titles[labelid] = [title]
 
     def read_areas(self):
         self.area2name = {}
@@ -208,7 +219,7 @@ class MedicalEntCleaner:
         :param text:
         :return:
         """
-        text = str(text).strip().lower()
+        text = str(text).strip()
         for eng_name, ch_name in self.eng_name2ch_name:
             text = text.replace(eng_name, eng_name + "," + ch_name)
         return text
@@ -256,6 +267,9 @@ class MedicalEntCleaner:
         for i in data:
             if i["type"] == "Medical":
                 subj_id, ori_attr_info, clean_attr_info = self.clean_medical_ent_info(i)
+                clean_attr_info["htitles"] = []
+                if subj_id in self.labelid2titles:
+                    clean_attr_info["htitles"] = self.labelid2titles[subj_id]
                 clean_di[subj_id] = clean_attr_info
                 ori_di[subj_id] = ori_attr_info
 
@@ -271,13 +285,13 @@ class MedicalEntCleaner:
                      ori_di[k]["主要成分"], v["bases"],
                      ori_di[k]["功能"], v["functions"],
                      ori_di[k]["产地"], v["place"],
-                     ori_di[k]["规格"], v["spec"]])
+                     ori_di[k]["规格"], v["spec"], v["htitles"]])
             df = pd.DataFrame(df, columns=["SubjID", "名字", "name",
                                            "生产企业", "company",
                                            "主要成分", "bases",
                                            "功能", "functions",
                                            "产地", "place",
-                                           "规格", "spec"])
+                                           "规格", "spec","历史标题"])
             df.to_excel(xls_save_path, index=False)
         return clean_di
 
@@ -328,6 +342,7 @@ class MedicalEntCleaner:
 
 if __name__ == "__main__":
     read_path = os.path.join(PROJ_PATH, "data/ori_data/entity_kb.txt")
+    medical_data_path = os.path.join(PROJ_PATH, "data/format_data/medical_label_data.txt")
     save_path = os.path.join(PROJ_PATH, "data/format_data/medical_ents.bin")
     xls_save_path = os.path.join(PROJ_PATH, "data/format_data/medical_ents.xlsx")
     area_path = os.path.join(PROJ_PATH, "data/external_data/areas.txt")
@@ -335,7 +350,8 @@ if __name__ == "__main__":
     eng2ch_company_path = os.path.join(PROJ_PATH, "data/external_data/ForeignName2CHName.json.json")
     ext_fun_path = os.path.join(PROJ_PATH, "data/external_data/funnctions.json")
     mec = MedicalEntCleaner(areas_path=area_path, foreign_name2ch_name_path=eng2ch_name_path,
-                            eng2ch_company_path=eng2ch_company_path, external_fun_path=ext_fun_path)
+                            eng2ch_company_path=eng2ch_company_path, external_fun_path=ext_fun_path,
+                            medical_data_path=medical_data_path)
     res = mec.clean_ori_data(read_path, save_path, xls_save_path)
     # MedicalEntCleaner.get_single_char_for_spec(save_path)
     # MedicalEntCleaner.convert_ent_to_xlsx(

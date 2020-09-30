@@ -14,8 +14,9 @@ class TitleCleaner():
         text = re.sub("\s", "", text)
         text = re.sub("&[0-9a-zA-Z]+?;", "", text)
         text = Opencc.to_simple(text)
-        if len(text) < 1:
+        if len(text) < 2:
             return None
+
         return text
 
     @classmethod
@@ -94,5 +95,14 @@ if __name__ == "__main__":
     label_data_decoded_path = r"G:\Codes\CCKS2020TitleSearch\data\format_data\all_label_data_decode.txt"
     # TitleCleaner.format_ori_data(read_path, medical_ent_path, book_ent_path, medical_save_path, book_save_path,
     #                              label_data_decoded_path)
-    TitleCleaner.clean_test_data(r"G:\Codes\CCKS2020TitleSearch\data\ori_data\final_test.txt",
-                                 r"G:\Codes\CCKS2020TitleSearch\data\format_data\final_test.txt")
+    # TitleCleaner.clean_test_data(r"G:\Codes\CCKS2020TitleSearch\data\ori_data\final_test.txt",
+    #                              r"G:\Codes\CCKS2020TitleSearch\data\format_data\final_test.txt")
+
+    # 分成训练集和测试集
+    with open(r"G:\Codes\CCKS2020TitleSearch\data\format_data\medical_label_data.txt", "r", encoding="utf8") as fr:
+        data = fr.readlines()
+    random.shuffle(data)
+    with open(r"G:\Codes\CCKS2020TitleSearch\data\format_data\train.txt", "w", encoding="utf8") as fw:
+        fw.writelines(data[3000:])
+    with open(r"G:\Codes\CCKS2020TitleSearch\data\format_data\dev.txt", "w", encoding="utf8") as fw:
+        fw.writelines(data[0:3000])
